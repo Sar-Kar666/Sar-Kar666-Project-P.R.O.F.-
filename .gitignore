@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.log
+
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# Project Specific
+chrome_data/
+*.bat
+
+# Sensitive Data (Optional, if you move keys here)
+.env

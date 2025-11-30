@@ -1,0 +1,17 @@
+{
+  "day": "Monday",
+  "schedule": [
+    {
+      "time": "09:00 AM",
+      "subject": "Artificial Intelligence",
+      "teacher_name": "jod",
+      "phone_number": "+918837394176" 
+    },
+    {
+      "time": "11:00 AM",
+      "subject": "Data Structures",
+      "teacher_name": "Annie",
+      "phone_number": "+916009062300"
+    }
+  ]
+}
