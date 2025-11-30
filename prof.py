@@ -11,6 +11,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 import google.generativeai as genai
+import platform
 
 # --- Configuration ---
 from dotenv import load_dotenv
@@ -42,9 +43,11 @@ Teacher Name
 Subject
 Teacher's Reply Text
 Teacher's Specific Instructions (Optional)
+Context: The question you asked the teacher (e.g., "Do you have the class?")
 
 Your Task:
 Classify the status: CONFIRMED, CANCELLED, RESCHEDULED, or UNCERTAIN.
+IMPORTANT: If the teacher says "Yes" or "I will take it" in response to "Do you have the class?", status is CONFIRMED.
 Draft a concise, emoji-rich WhatsApp announcement for the students.
 If RESCHEDULED: Clearly state the new time/venue.
 If CANCELLED: Tell students to enjoy their free time.
@@ -52,6 +55,12 @@ If CANCELLED: Tell students to enjoy their free time.
 Output Format:
 Return ONLY a raw JSON object:
 { "status": "...", "announcement": "..." }
+
+Examples:
+1. Input: Reply="Yes", Context="Do you have the class?" -> Output: {"status": "CONFIRMED", "announcement": "..."}
+2. Input: Reply="No", Context="Do you have the class?" -> Output: {"status": "CANCELLED", "announcement": "..."}
+3. Input: Reply="I will take it at 10", Context="Do you have the class?" -> Output: {"status": "RESCHEDULED", "announcement": "..."}
+4. Input: Reply="Yes", Context="Could you please clarify if the class is confirmed?" -> Output: {"status": "CONFIRMED", "announcement": "..."}
 """
 
 def init_driver():
@@ -120,8 +129,9 @@ def open_chat(driver, contact_name):
             EC.element_to_be_clickable((By.XPATH, SEARCH_BOX_XPATH))
         )
         search_box.click()
-        # Robust clear: Ctrl+A -> Backspace (standard .clear() is flaky on WhatsApp Web)
-        search_box.send_keys(Keys.CONTROL + "a")
+        # Robust clear: Ctrl+A (or Cmd+A) -> Backspace
+        modifier = Keys.COMMAND if platform.system() == 'Darwin' else Keys.CONTROL
+        search_box.send_keys(modifier + "a")
         search_box.send_keys(Keys.BACKSPACE)
         time.sleep(0.5) 
         search_box.send_keys(contact_name)
@@ -247,7 +257,21 @@ def check_for_reply(driver, contact_name):
         pass
     return None
 
-def analyze_reply_with_gemini(reply_text, teacher_name, subject, instructions=None):
+def heuristic_analysis(reply_text, teacher, subject, time_slot="Scheduled Time"):
+    """Simple keyword-based analysis to bypass AI for obvious replies."""
+    text = reply_text.lower().strip()
+    
+    # CONFIRMED keywords
+    if any(word in text for word in ["yes", "yeah", "yep", "confirm", "sure", "ok", "okay"]):
+        return {"status": "CONFIRMED", "announcement": f"Class Confirmed! ✅\n\nTeacher: {teacher}\nSubject: {subject}\nTime: {time_slot}\n\nSee you there! 🎓"}
+        
+    # CANCELLED keywords
+    if any(word in text for word in ["no", "nope", "cancel", "not taking", "busy"]):
+        return {"status": "CANCELLED", "announcement": f"Class Cancelled! ❌\n\nTeacher: {teacher}\nSubject: {subject}\n\nEnjoy your free time! 🎉"}
+        
+    return None
+
+def analyze_reply_with_gemini(reply_text, teacher_name, subject, instructions=None, bot_question=None):
     """Send the reply to Gemini API for analysis."""
     print("Analyzing reply with Gemini...")
     if not reply_text:
@@ -264,10 +288,12 @@ def analyze_reply_with_gemini(reply_text, teacher_name, subject, instructions=No
     Subject: {subject}
     Teacher's Reply Text: "{reply_text}"
     Teacher's Specific Instructions: "{instructions if instructions else 'None'}"
+    Context (Your Question): "{bot_question if bot_question else 'Unknown'}"
     """
     
     try:
         response = model.generate_content(SYSTEM_PROMPT + "\n" + prompt)
+        
         # Clean up response to ensure it's valid JSON
         json_text = response.text.strip()
         if json_text.startswith("```json"):
@@ -324,6 +350,7 @@ def run_daily_cycle(routine_file, demo_mode):
                 pending_replies.append({
                     "teacher": teacher,
                     "subject": subject,
+                    "time": time_slot, # Added time for announcement
                     "last_msg": initial_msg,
                     "state": "WAITING_FOR_CONFIRMATION",
                     "last_seen_msg": None # Track last seen message to detect new ones
@@ -354,8 +381,13 @@ def run_daily_cycle(routine_file, demo_mode):
                     item["last_seen_msg"] = current_reply # Update last seen to avoid re-processing
 
                     if state == "WAITING_FOR_CONFIRMATION":
-                        # Analyze the reply to determine status
-                        pre_analysis = analyze_reply_with_gemini(current_reply, teacher, subject)
+                        # 1. Try Heuristic Analysis first (Fast & Deterministic)
+                        pre_analysis = heuristic_analysis(current_reply, teacher, subject, item.get("time"))
+                        
+                        # 2. Fallback to AI if heuristic is uncertain
+                        if not pre_analysis:
+                            pre_analysis = analyze_reply_with_gemini(current_reply, teacher, subject, bot_question=item.get("last_msg"))
+                        
                         status = pre_analysis.get("status", "UNCERTAIN") if pre_analysis else "UNCERTAIN"
                         
                         if status == "CANCELLED":
@@ -369,6 +401,7 @@ def run_daily_cycle(routine_file, demo_mode):
                             print(f"Status is UNCERTAIN. Asking for clarification...")
                             clarification_msg = "Could you please clarify if the class is confirmed?"
                             send_whatsapp_message(driver, teacher, clarification_msg)
+                            item["last_msg"] = clarification_msg # UPDATE CONTEXT
                             # Stay in WAITING_FOR_CONFIRMATION state
                             
                         else:
@@ -388,16 +421,27 @@ def run_daily_cycle(routine_file, demo_mode):
                         send_whatsapp_message(driver, teacher, exit_msg)
                         
                         # Final Analysis with instructions
+                        # Final Analysis with instructions
                         first_reply = item.get("first_reply", "")
-                        final_analysis = analyze_reply_with_gemini(first_reply, teacher, subject, instructions=current_reply)
+                        # Pass the context of the instruction question
+                        final_analysis = analyze_reply_with_gemini(first_reply, teacher, subject, instructions=current_reply, bot_question="Do you want any specific instruction for the class?")
                         
+                        announcement = None
                         if final_analysis:
                             print(f"Final Status: {final_analysis.get('status')}")
                             announcement = final_analysis.get("announcement")
-                            
-                            # Notify Students
-                            if announcement:
-                                notify_students(driver, announcement)
+                        
+                        # Fallback: If AI failed or didn't return announcement, generate one manually
+                        if not announcement and item.get("status") == "CONFIRMED":
+                            print("WARNING: AI failed to generate announcement. Using fallback.")
+                            instr_text = f"\nNote: {current_reply}" if len(current_reply) > 3 and "no" not in current_reply.lower() else ""
+                            announcement = f"Class Confirmed! ✅\n\nTeacher: {teacher}\nSubject: {subject}\nTime: {item.get('time', 'Scheduled Time')}{instr_text}\n\nSee you there! 🎓"
+
+                        # Notify Students
+                        if announcement:
+                            notify_students(driver, announcement)
+                        else:
+                            print("ERROR: Could not generate announcement.")
                         
                         # Remove from pending
                         pending_replies.remove(item)
