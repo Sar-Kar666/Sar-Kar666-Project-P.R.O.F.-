@@ -11,7 +11,7 @@ env/
 
 # Project Specific
 chrome_data/
-*.bat
+# *.bat
 
 # Sensitive Data (Optional, if you move keys here)
 .env

@@ -1,8 +1,8 @@
-# Project Antigravity 🚀
-**Autonomous Class Coordinator Bot**
+# P.R.O.F. 🚀
+**(Programmed Routine for Operational Flow)**
 
 ## Overview
-Project Antigravity is an AI-powered automation tool designed to streamline class coordination for college students. It autonomously contacts teachers via WhatsApp, confirms class schedules, handles cancellations/rescheduling, and broadcasts updates to student groups.
+P.R.O.F. is an AI-powered automation tool designed to streamline class coordination for college students. It autonomously contacts teachers via WhatsApp, confirms class schedules, handles cancellations/rescheduling, and broadcasts updates to student groups.
 
 ## Features
 - **Autonomous Scheduling**: Runs daily on a set schedule.
@@ -17,14 +17,14 @@ Project Antigravity is an AI-powered automation tool designed to streamline clas
     ```
 2.  **Configuration**:
     - Update `routine.json` with your class schedule.
-    - Set your `GEMINI_API_KEY` in `antigravity.py` (or use env vars).
+    - Set your `GEMINI_API_KEY` in `prof.py` (or use env vars).
 3.  **Run**:
     ```bash
-    python antigravity.py --continuous
+    python prof.py --continuous
     ```
 
 ## Usage
-- **Manual Run**: Double-click `start_antigravity.bat`.
+- **Manual Run**: Double-click `start_prof.bat`.
 - **Demo Mode**: Run with `--demo` flag for faster testing.
 
 ## Tech Stack

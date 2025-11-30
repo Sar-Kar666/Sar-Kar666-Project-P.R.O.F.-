@@ -25,7 +25,7 @@ CONTACT_NAME_ON_HEADER_XPATH = '//header//span[@title]'
 
 # --- System Prompt ---
 SYSTEM_PROMPT = """
-You are the 'Antigravity' Autonomous Coordinator. Your goal is to interpret college professor replies and inform students.
+You are 'P.R.O.F.' (Programmed Routine for Operational Flow). Your goal is to interpret college professor replies and inform students.
 
 Input:
 Teacher Name
