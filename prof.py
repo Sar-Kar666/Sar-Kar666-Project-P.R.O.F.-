@@ -13,8 +13,18 @@ from webdriver_manager.chrome import ChromeDriverManager
 import google.generativeai as genai
 
 # --- Configuration ---
-# TODO: Replace with your actual API Key or set GEMINI_API_KEY environment variable
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyB-u0ZfgwG4g0b_bT4NmrY06stV_caeFPI")
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# --- Configuration ---
+# GEMINI_API_KEY is now loaded from .env
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+if not GEMINI_API_KEY:
+    print("ERROR: GEMINI_API_KEY not found in .env file.")
+    exit(1)
 
 # WhatsApp Web Selectors (These may need updating if WhatsApp Web changes)
 # Using generic XPaths where possible to be more robust
