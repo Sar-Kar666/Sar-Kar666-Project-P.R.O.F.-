@@ -4,14 +4,38 @@
     {
       "time": "09:00 AM",
       "subject": "Artificial Intelligence",
-      "teacher_name": "jod",
-      "phone_number": "+918837394176" 
+      "teacher_name": "Diptanu",
+      "telegram_chat_id": 7542430041
+    },
+    {
+      "time": "01:00 PM",
+      "subject": "Machine Learning",
+      "teacher_name": "Diptanu",
+      "telegram_chat_id": 7542430041
+    },
+    {
+      "time": "03:00 PM",
+      "subject": "Deep Learning",
+      "teacher_name": "Diptanu",
+      "telegram_chat_id": 7542430041
     },
     {
       "time": "11:00 AM",
       "subject": "Data Structures",
       "teacher_name": "Annie",
-      "phone_number": "+916009062300"
+      "telegram_chat_id": 1111912063
+    },
+    {
+      "time": "02:00 PM",
+      "subject": "Algorithms",
+      "teacher_name": "Annie",
+      "telegram_chat_id": 1111912063
+    },
+    {
+      "time": "04:00 PM",
+      "subject": "Database Management",
+      "teacher_name": "Annie",
+      "telegram_chat_id": 1111912063
     }
   ]
 }
